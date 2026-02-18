@@ -1,0 +1,19 @@
+# macOS
+.DS_Store
+
+# build outputs
+bin/
+obj/
+
+# IDE
+.vs/
+.vscode/
+*.user
+*.suo
+
+# logs
+*.log
+
+# env
+.env
+
