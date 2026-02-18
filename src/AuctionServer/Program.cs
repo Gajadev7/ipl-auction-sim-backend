@@ -13,6 +13,8 @@ builder.Services.AddHostedService(serviceProvider => serviceProvider.GetRequired
 
 var app = builder.Build();
 
+Console.WriteLine($"Environment: {app.Environment.EnvironmentName}");
+
 app.UseSwagger();
 app.UseSwaggerUI(options =>
 {
