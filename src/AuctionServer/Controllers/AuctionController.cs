@@ -1,5 +1,6 @@
 using AuctionEngine;
 using AuctionServer.Contracts;
+using AuctionServer.Models;
 using AuctionServer.Services;
 using Microsoft.AspNetCore.Mvc;
 
@@ -9,19 +10,37 @@ namespace AuctionServer.Controllers;
 [Route("auction")]
 public class AuctionController : ControllerBase
 {
+    private const int TeamCount = 10;
+    private const decimal TeamInitialPurse = 100m;
+
     private readonly AuctionManager _auctionManager;
     private readonly AuctionEventStream _auctionEventStream;
+    private readonly PlayerLoader _playerLoader;
+    private readonly BidderRegistry _bidderRegistry;
 
-    public AuctionController(AuctionManager auctionManager, AuctionEventStream auctionEventStream)
+    public AuctionController(
+        AuctionManager auctionManager,
+        AuctionEventStream auctionEventStream,
+        PlayerLoader playerLoader,
+        BidderRegistry bidderRegistry)
     {
         _auctionManager = auctionManager;
         _auctionEventStream = auctionEventStream;
+        _playerLoader = playerLoader;
+        _bidderRegistry = bidderRegistry;
     }
 
     [HttpPost("start")]
-    public ActionResult<AuctionManagerState> Start([FromBody] StartAuctionRequest request)
+    public ActionResult<AuctionManagerState> Start()
     {
-        return Execute(() => _auctionManager.StartAuction(request.Teams, request.Players));
+        return Execute(() =>
+        {
+            var playerDtos = _playerLoader.LoadPlayers();
+            var players = playerDtos.Select(MapPlayer).ToList();
+            var teams = CreateTeamsAndRegisterBidders();
+
+            _auctionManager.StartAuction(teams, players);
+        });
     }
 
     [HttpPost("bid")]
@@ -109,5 +128,80 @@ public class AuctionController : ControllerBase
         {
             return BadRequest(exception.Message);
         }
+    }
+
+    private List<Team> CreateTeamsAndRegisterBidders()
+    {
+        _bidderRegistry.Clear();
+
+        var teams = new List<Team>(TeamCount);
+        for (var teamNumber = 1; teamNumber <= TeamCount; teamNumber++)
+        {
+            var team = new Team
+            {
+                Id = CreateDeterministicGuid(teamNumber),
+                Name = $"Team {teamNumber}",
+                PurseRemaining = TeamInitialPurse,
+                Squad = []
+            };
+
+            if (teamNumber == 1)
+            {
+                _bidderRegistry.RegisterHuman(team.Id);
+            }
+            else
+            {
+                _bidderRegistry.RegisterAi(team.Id);
+            }
+
+            teams.Add(team);
+        }
+
+        return teams;
+    }
+
+    private static Player MapPlayer(PlayerDto dto)
+    {
+        if (string.IsNullOrWhiteSpace(dto.Name))
+        {
+            throw new ArgumentException($"Player name is required for player id {dto.Id}.");
+        }
+
+        if (dto.BasePrice <= 0m)
+        {
+            throw new ArgumentException($"BasePrice must be greater than zero for player id {dto.Id}.");
+        }
+
+        return new Player
+        {
+            Id = CreateDeterministicGuid(dto.Id),
+            Name = dto.Name.Trim(),
+            Role = ParseRole(dto.Role),
+            BasePrice = dto.BasePrice
+        };
+    }
+
+    private static PlayerRole ParseRole(string role)
+    {
+        if (string.IsNullOrWhiteSpace(role))
+        {
+            throw new ArgumentException("Player role is required.");
+        }
+
+        var normalizedRole = role.Trim().Replace("-", string.Empty).Replace(" ", string.Empty);
+
+        return normalizedRole.ToLowerInvariant() switch
+        {
+            "batsman" => PlayerRole.Batsman,
+            "bowler" => PlayerRole.Bowler,
+            "allrounder" => PlayerRole.AllRounder,
+            "wicketkeeper" => PlayerRole.WicketKeeper,
+            _ => throw new ArgumentException($"Unsupported player role '{role}'.")
+        };
+    }
+
+    private static Guid CreateDeterministicGuid(int value)
+    {
+        return new Guid(value, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
     }
 }

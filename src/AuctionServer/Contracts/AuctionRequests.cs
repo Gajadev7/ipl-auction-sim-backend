@@ -1,13 +1,4 @@
-using AuctionEngine;
-
 namespace AuctionServer.Contracts;
-
-public class StartAuctionRequest
-{
-    public List<Team> Teams { get; init; } = [];
-
-    public List<Player> Players { get; init; } = [];
-}
 
 public class PlaceBidRequest
 {

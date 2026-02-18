@@ -8,6 +8,8 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.AddSingleton<AuctionManager>();
 builder.Services.AddSingleton<AuctionEventStream>();
+builder.Services.AddSingleton<PlayerLoader>();
+builder.Services.AddSingleton<BidderRegistry>();
 builder.Services.AddSingleton<AiAuctionCoordinator>();
 builder.Services.AddHostedService(serviceProvider => serviceProvider.GetRequiredService<AiAuctionCoordinator>());
 

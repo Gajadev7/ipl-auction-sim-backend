@@ -8,6 +8,7 @@ namespace AuctionServer.Services;
 public sealed class AiAuctionCoordinator : IHostedService, IDisposable
 {
     private readonly AuctionManager _auctionManager;
+    private readonly BidderRegistry _bidderRegistry;
     private readonly ILogger<AiAuctionCoordinator> _logger;
     private readonly Channel<AuctionEvent> _eventChannel;
     private readonly Dictionary<Guid, AiBidder> _aiBidders = [];
@@ -19,9 +20,13 @@ public sealed class AiAuctionCoordinator : IHostedService, IDisposable
     private Task? _eventWorkerTask;
     private bool _disposed;
 
-    public AiAuctionCoordinator(AuctionManager auctionManager, ILogger<AiAuctionCoordinator> logger)
+    public AiAuctionCoordinator(
+        AuctionManager auctionManager,
+        BidderRegistry bidderRegistry,
+        ILogger<AiAuctionCoordinator> logger)
     {
         _auctionManager = auctionManager;
+        _bidderRegistry = bidderRegistry;
         _logger = logger;
         _eventChannel = Channel.CreateUnbounded<AuctionEvent>(new UnboundedChannelOptions
         {
@@ -115,7 +120,8 @@ public sealed class AiAuctionCoordinator : IHostedService, IDisposable
         _aiTeamsThatPassed.Clear();
 
         var state = _auctionManager.GetCurrentState();
-        var aiTeams = state.Teams.Where(IsAiTeam).ToList();
+        var registeredAiTeamIds = _bidderRegistry.GetAiTeamIds();
+        var aiTeams = state.Teams.Where(team => registeredAiTeamIds.Contains(team.Id)).ToList();
         if (aiTeams.Count == 0)
         {
             aiTeams = state.Teams.ToList();
@@ -237,12 +243,4 @@ public sealed class AiAuctionCoordinator : IHostedService, IDisposable
         }
     }
 
-    private static bool IsAiTeam(Team team)
-    {
-        var normalizedName = team.Name.Trim();
-        return normalizedName.StartsWith("AI ", StringComparison.OrdinalIgnoreCase)
-            || normalizedName.EndsWith(" (AI)", StringComparison.OrdinalIgnoreCase)
-            || normalizedName.EndsWith("-AI", StringComparison.OrdinalIgnoreCase)
-            || normalizedName.Contains("[AI]", StringComparison.OrdinalIgnoreCase);
-    }
 }
