@@ -13,17 +13,11 @@ builder.Services.AddHostedService(serviceProvider => serviceProvider.GetRequired
 
 var app = builder.Build();
 
-app.UseSwagger(swaggerOptions =>
+app.UseSwagger();
+app.UseSwaggerUI(options =>
 {
-    swaggerOptions.RouteTemplate = "swagger/{documentName}/swagger.json";
+    options.SwaggerEndpoint("/swagger/v1/swagger.json", "AuctionServer API v1");
 });
-app.UseSwaggerUI(swaggerUiOptions =>
-{
-    swaggerUiOptions.RoutePrefix = "swagger";
-    swaggerUiOptions.SwaggerEndpoint("/swagger/v1/swagger.json", "AuctionServer API v1");
-});
-
-app.MapGet("/swagger", () => Results.Redirect("/swagger/index.html"));
 
 app.MapControllers();
 
