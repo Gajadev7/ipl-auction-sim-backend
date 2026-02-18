@@ -1,0 +1,14 @@
+{
+  "name": "IPL Auction Server",
+  "image": "mcr.microsoft.com/devcontainers/dotnet:8.0",
+  "features": {},
+  "postCreateCommand": "dotnet restore",
+  "forwardPorts": [5078],
+  "portsAttributes": {
+    "5078": {
+      "label": "Auction API",
+      "onAutoForward": "openBrowser"
+    }
+  }
+}
+
