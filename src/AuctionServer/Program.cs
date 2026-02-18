@@ -13,11 +13,8 @@ builder.Services.AddHostedService(serviceProvider => serviceProvider.GetRequired
 
 var app = builder.Build();
 
-if (app.Environment.IsDevelopment())
-{
-    app.UseSwagger();
-    app.UseSwaggerUI();
-}
+app.UseSwagger();
+app.UseSwaggerUI();
 
 app.MapControllers();
 
